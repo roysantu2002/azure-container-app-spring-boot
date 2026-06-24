@@ -84,6 +84,21 @@ resource "azurerm_container_app" "orders" {
         value = var.managed_identity_name
       }
 
+      env {
+        name  = "AZURE_CLIENT_ID"
+        value = azurerm_user_assigned_identity.orders_service.client_id
+      }
+
+      env {
+        name  = "SPRING_DATASOURCE_AZURE_PASSWORDLESS_ENABLED"
+        value = "true"
+      }
+
+      env {
+        name  = "AZURE_MI_ENABLED"
+        value = "true"
+      }
+
       liveness_probe {
         transport        = "HTTP"
         path             = "/actuator/health/liveness"

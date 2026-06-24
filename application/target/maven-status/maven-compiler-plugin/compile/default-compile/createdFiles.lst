@@ -1,5 +1,4 @@
 com/example/orders/OrdersApplication.class
 com/example/orders/entity/OrderEntity.class
-com/example/orders/config/DataSourceConfig.class
-com/example/orders/config/AzureTokenProvider.class
+com/example/orders/controller/OrderController.class
 com/example/orders/repository/OrderRepository.class

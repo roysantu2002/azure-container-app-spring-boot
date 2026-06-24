@@ -3,17 +3,43 @@ server:
 
 spring:
 
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:5432/${POSTGRES_DB:ordersdb}?sslmode=require
+    username: ${POSTGRES_MI_USER:orders-service-identity}
+    driver-class-name: org.postgresql.Driver
+
+    azure:
+      passwordless-enabled: ${SPRING_DATASOURCE_AZURE_PASSWORDLESS_ENABLED:false}
+
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 2
+      idle-timeout: 30000
+      connection-timeout: 30000
+      max-lifetime: 1800000
+
   jpa:
     hibernate:
       ddl-auto: none
-
+    show-sql: false
+    open-in-view: false
     properties:
       hibernate:
         default_schema: orders
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
 
   flyway:
     enabled: true
     locations: classpath:db/migration
+    schemas: orders
+    default-schema: orders
+
+  cloud:
+    azure:
+      credential:
+        managed-identity-enabled: ${AZURE_MI_ENABLED:false}
+        client-id: ${AZURE_CLIENT_ID:}
 
 management:
   endpoint:
