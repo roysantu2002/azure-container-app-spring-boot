@@ -70,8 +70,21 @@ jobs:
               "SPRING_DATASOURCE_AZURE_PASSWORDLESS_ENABLED=true" \
               "AZURE_MI_ENABLED=true"
 
-      - name: Wait for rate limit cooldown
-        run: sleep 30
+      - name: Wait for provisioning to complete
+        run: |
+          echo "Waiting for container app provisioning to complete..."
+          for i in $(seq 1 30); do
+            STATE=$(az containerapp show \
+              --name ${{ env.CONTAINER_APP_NAME }} \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --query "properties.provisioningState" -o tsv)
+            echo "Attempt ${i}: provisioningState=${STATE}"
+            if [ "$STATE" = "Succeeded" ]; then
+              echo "Provisioning complete."
+              break
+            fi
+            sleep 10
+          done
 
       - name: Deploy image
         run: |
