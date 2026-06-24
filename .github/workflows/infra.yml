@@ -19,6 +19,7 @@ on:
           - plan
           - apply
           - destroy
+          - import
 
 permissions:
   id-token: write
@@ -71,6 +72,54 @@ jobs:
 
       - name: Terraform Validate
         run: terraform validate
+
+      - name: Import Existing Azure Resources
+        if: github.event.inputs.action == 'import'
+        run: |
+          set -e
+          SUBSCRIPTION_ID="${ARM_SUBSCRIPTION_ID}"
+          RG="rg-orders-dev"
+          VARS="-var-file=environments/${{ github.event.inputs.environment }}.tfvars"
+
+          echo "=== Importing existing resources into Terraform state ==="
+
+          # Resource Group
+          terraform import $VARS azurerm_resource_group.orders \
+            "/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RG}" 2>&1 || echo "SKIP: resource group (already in state or not found)"
+
+          # User-Assigned Managed Identity
+          terraform import $VARS azurerm_user_assigned_identity.orders_service \
+            "/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RG}/providers/Microsoft.ManagedIdentity/userAssignedIdentities/orders-service-identity" 2>&1 || echo "SKIP: managed identity"
+
+          # Container Registry
+          terraform import $VARS azurerm_container_registry.orders \
+            "/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RG}/providers/Microsoft.ContainerRegistry/registries/acrordersdev" 2>&1 || echo "SKIP: container registry"
+
+          # PostgreSQL Flexible Server
+          terraform import $VARS azurerm_postgresql_flexible_server.orders \
+            "/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RG}/providers/Microsoft.DBforPostgreSQL/flexibleServers/pg-orders-dev" 2>&1 || echo "SKIP: postgres server"
+
+          # PostgreSQL Firewall Rule
+          terraform import $VARS azurerm_postgresql_flexible_server_firewall_rule.allow_azure \
+            "/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RG}/providers/Microsoft.DBforPostgreSQL/flexibleServers/pg-orders-dev/firewallRules/AllowAzureServices" 2>&1 || echo "SKIP: postgres firewall rule"
+
+          # PostgreSQL Database
+          terraform import $VARS azurerm_postgresql_flexible_server_database.ordersdb \
+            "/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RG}/providers/Microsoft.DBforPostgreSQL/flexibleServers/pg-orders-dev/databases/ordersdb" 2>&1 || echo "SKIP: postgres database"
+
+          # Log Analytics Workspace
+          terraform import $VARS azurerm_log_analytics_workspace.orders \
+            "/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RG}/providers/Microsoft.OperationalInsights/workspaces/log-orders-dev" 2>&1 || echo "SKIP: log analytics"
+
+          # ACA Environment
+          terraform import $VARS azurerm_container_app_environment.orders \
+            "/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RG}/providers/Microsoft.App/managedEnvironments/managedEnvironment-rgordersdev-a29a" 2>&1 || echo "SKIP: aca environment"
+
+          # Container App
+          terraform import $VARS azurerm_container_app.orders \
+            "/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RG}/providers/Microsoft.App/containerApps/acrordersapp" 2>&1 || echo "SKIP: container app"
+
+          echo "=== Import complete. Run 'plan' next to verify state. ==="
 
       - name: Terraform Plan
         if: github.event.inputs.action == 'plan' || github.event.inputs.action == 'apply'
