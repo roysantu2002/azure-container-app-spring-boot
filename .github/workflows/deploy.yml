@@ -47,12 +47,29 @@ jobs:
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
           echo "Deploying image: ${TAG}"
 
-      - name: Deploy to Azure Container App
+      - name: Get Managed Identity Client ID
+        id: mi
+        run: |
+          CLIENT_ID=$(az identity show \
+            --name orders-service-identity \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --query "clientId" -o tsv)
+          echo "client_id=${CLIENT_ID}" >> "$GITHUB_OUTPUT"
+          echo "Managed Identity Client ID: ${CLIENT_ID}"
+
+      - name: Deploy image and set env vars
         run: |
           az containerapp update \
             --name ${{ env.CONTAINER_APP_NAME }} \
             --resource-group ${{ env.RESOURCE_GROUP }} \
-            --image "${{ steps.image.outputs.tag }}"
+            --image "${{ steps.image.outputs.tag }}" \
+            --set-env-vars \
+              "POSTGRES_HOST=pg-orders-dev.postgres.database.azure.com" \
+              "POSTGRES_DB=ordersdb" \
+              "POSTGRES_MI_USER=orders-service-identity" \
+              "AZURE_CLIENT_ID=${{ steps.mi.outputs.client_id }}" \
+              "SPRING_DATASOURCE_AZURE_PASSWORDLESS_ENABLED=true" \
+              "AZURE_MI_ENABLED=true"
 
       - name: Verify deployment
         run: |
@@ -61,3 +78,13 @@ jobs:
             --resource-group ${{ env.RESOURCE_GROUP }} \
             --query "{name:name, image:properties.template.containers[0].image, fqdn:properties.configuration.ingress.fqdn, provisioningState:properties.provisioningState}" \
             -o table
+
+      - name: Show app URL
+        run: |
+          FQDN=$(az containerapp show \
+            --name ${{ env.CONTAINER_APP_NAME }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --query "properties.configuration.ingress.fqdn" -o tsv)
+          echo "App URL: https://${FQDN}"
+          echo "Health:  https://${FQDN}/actuator/health"
+          echo "Orders:  https://${FQDN}/orders"
