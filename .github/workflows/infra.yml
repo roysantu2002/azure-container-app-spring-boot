@@ -76,49 +76,62 @@ jobs:
       - name: Import Existing Azure Resources
         if: github.event.inputs.action == 'import'
         run: |
-          set -e
           SUBSCRIPTION_ID="${ARM_SUBSCRIPTION_ID}"
           RG="rg-orders-dev"
           VARS="-var-file=environments/${{ github.event.inputs.environment }}.tfvars"
 
+          import_resource() {
+            local NAME="$1"
+            local ADDR="$2"
+            local ID="$3"
+            echo ""
+            echo "--- Importing: ${NAME} ---"
+            if terraform import $VARS "$ADDR" "$ID" 2>&1; then
+              echo "OK: ${NAME} imported"
+            else
+              echo "SKIP: ${NAME} (not found in Azure or already in state)"
+            fi
+          }
+
           echo "=== Importing existing resources into Terraform state ==="
 
-          # Resource Group
-          terraform import $VARS azurerm_resource_group.orders \
-            "/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RG}" 2>&1 || echo "SKIP: resource group (already in state or not found)"
+          import_resource "Resource Group" \
+            "azurerm_resource_group.orders" \
+            "/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RG}"
 
-          # User-Assigned Managed Identity
-          terraform import $VARS azurerm_user_assigned_identity.orders_service \
-            "/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RG}/providers/Microsoft.ManagedIdentity/userAssignedIdentities/orders-service-identity" 2>&1 || echo "SKIP: managed identity"
+          import_resource "Managed Identity" \
+            "azurerm_user_assigned_identity.orders_service" \
+            "/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RG}/providers/Microsoft.ManagedIdentity/userAssignedIdentities/orders-service-identity"
 
-          # Container Registry
-          terraform import $VARS azurerm_container_registry.orders \
-            "/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RG}/providers/Microsoft.ContainerRegistry/registries/acrordersdev" 2>&1 || echo "SKIP: container registry"
+          import_resource "Container Registry" \
+            "azurerm_container_registry.orders" \
+            "/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RG}/providers/Microsoft.ContainerRegistry/registries/acrordersdev"
 
-          # PostgreSQL Flexible Server
-          terraform import $VARS azurerm_postgresql_flexible_server.orders \
-            "/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RG}/providers/Microsoft.DBforPostgreSQL/flexibleServers/pg-orders-dev" 2>&1 || echo "SKIP: postgres server"
+          import_resource "PostgreSQL Server" \
+            "azurerm_postgresql_flexible_server.orders" \
+            "/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RG}/providers/Microsoft.DBforPostgreSQL/flexibleServers/pg-orders-dev"
 
-          # PostgreSQL Firewall Rule
-          terraform import $VARS azurerm_postgresql_flexible_server_firewall_rule.allow_azure \
-            "/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RG}/providers/Microsoft.DBforPostgreSQL/flexibleServers/pg-orders-dev/firewallRules/AllowAzureServices" 2>&1 || echo "SKIP: postgres firewall rule"
+          import_resource "PostgreSQL Firewall Rule" \
+            "azurerm_postgresql_flexible_server_firewall_rule.allow_azure" \
+            "/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RG}/providers/Microsoft.DBforPostgreSQL/flexibleServers/pg-orders-dev/firewallRules/AllowAzureServices"
 
-          # PostgreSQL Database
-          terraform import $VARS azurerm_postgresql_flexible_server_database.ordersdb \
-            "/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RG}/providers/Microsoft.DBforPostgreSQL/flexibleServers/pg-orders-dev/databases/ordersdb" 2>&1 || echo "SKIP: postgres database"
+          import_resource "PostgreSQL Database" \
+            "azurerm_postgresql_flexible_server_database.ordersdb" \
+            "/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RG}/providers/Microsoft.DBforPostgreSQL/flexibleServers/pg-orders-dev/databases/ordersdb"
 
-          # Log Analytics Workspace
-          terraform import $VARS azurerm_log_analytics_workspace.orders \
-            "/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RG}/providers/Microsoft.OperationalInsights/workspaces/log-orders-dev" 2>&1 || echo "SKIP: log analytics"
+          import_resource "Log Analytics Workspace" \
+            "azurerm_log_analytics_workspace.orders" \
+            "/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RG}/providers/Microsoft.OperationalInsights/workspaces/log-orders-dev"
 
-          # ACA Environment
-          terraform import $VARS azurerm_container_app_environment.orders \
-            "/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RG}/providers/Microsoft.App/managedEnvironments/managedEnvironment-rgordersdev-a29a" 2>&1 || echo "SKIP: aca environment"
+          import_resource "ACA Environment" \
+            "azurerm_container_app_environment.orders" \
+            "/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RG}/providers/Microsoft.App/managedEnvironments/managedEnvironment-rgordersdev-a29a"
 
-          # Container App
-          terraform import $VARS azurerm_container_app.orders \
-            "/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RG}/providers/Microsoft.App/containerApps/acrordersapp" 2>&1 || echo "SKIP: container app"
+          import_resource "Container App" \
+            "azurerm_container_app.orders" \
+            "/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RG}/providers/Microsoft.App/containerApps/acrordersapp"
 
+          echo ""
           echo "=== Import complete. Run 'plan' next to verify state. ==="
 
       - name: Terraform Plan
