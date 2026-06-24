@@ -57,12 +57,11 @@ jobs:
           echo "client_id=${CLIENT_ID}" >> "$GITHUB_OUTPUT"
           echo "Managed Identity Client ID: ${CLIENT_ID}"
 
-      - name: Deploy image and set env vars
+      - name: Set environment variables
         run: |
           az containerapp update \
             --name ${{ env.CONTAINER_APP_NAME }} \
             --resource-group ${{ env.RESOURCE_GROUP }} \
-            --image "${{ steps.image.outputs.tag }}" \
             --set-env-vars \
               "POSTGRES_HOST=pg-orders-dev.postgres.database.azure.com" \
               "POSTGRES_DB=ordersdb" \
@@ -70,6 +69,16 @@ jobs:
               "AZURE_CLIENT_ID=${{ steps.mi.outputs.client_id }}" \
               "SPRING_DATASOURCE_AZURE_PASSWORDLESS_ENABLED=true" \
               "AZURE_MI_ENABLED=true"
+
+      - name: Wait for rate limit cooldown
+        run: sleep 30
+
+      - name: Deploy image
+        run: |
+          az containerapp update \
+            --name ${{ env.CONTAINER_APP_NAME }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --image "${{ steps.image.outputs.tag }}"
 
       - name: Verify deployment
         run: |
