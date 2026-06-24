@@ -1,1 +1,63 @@
-name: build
+name: "Build and Push Image"
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "application/**"
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  ACR_NAME: ${{ secrets.ACR_NAME }}
+  IMAGE_NAME: orders-service
+
+jobs:
+  build:
+    name: "Build & Push to ACR"
+    runs-on: ubuntu-latest
+
+    outputs:
+      image_tag: ${{ steps.push.outputs.image_tag }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Build with Maven
+        working-directory: application
+        run: mvn clean package -DskipTests -q
+
+      - name: Log in to ACR
+        run: az acr login --name ${{ env.ACR_NAME }}
+
+      - name: Build and push Docker image
+        id: push
+        working-directory: application
+        run: |
+          IMAGE_TAG="${ACR_NAME}.azurecr.io/${IMAGE_NAME}:${GITHUB_SHA::7}"
+          IMAGE_LATEST="${ACR_NAME}.azurecr.io/${IMAGE_NAME}:latest"
+
+          docker build -t "$IMAGE_TAG" -t "$IMAGE_LATEST" .
+          docker push "$IMAGE_TAG"
+          docker push "$IMAGE_LATEST"
+
+          echo "image_tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
+          echo "Pushed: ${IMAGE_TAG}"
