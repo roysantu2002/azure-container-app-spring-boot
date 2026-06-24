@@ -271,7 +271,104 @@ curl -s -X POST https://$FQDN/orders \
 
 ---
 
-## 13. Troubleshooting
+## 13. Manual Deploy and Run
+
+> Use these when the GitHub Actions deploy workflow fails or you want to deploy directly from CLI.
+> All commands are single-line for Cloud Shell compatibility.
+
+### 13.1 — Check provisioning state before any update
+
+```bash
+az containerapp show --name acrordersapp --resource-group rg-orders-dev --query "properties.provisioningState" -o tsv
+```
+
+If it shows `InProgress`, wait and re-check. Do NOT run any update until it shows `Succeeded`.
+
+### 13.2 — Force restart a stuck container app
+
+```bash
+REVISION=$(az containerapp revision list --name acrordersapp --resource-group rg-orders-dev --query "[0].name" -o tsv)
+
+az containerapp revision restart --name acrordersapp --resource-group rg-orders-dev --revision $REVISION
+```
+
+### 13.3 — Get Managed Identity Client ID
+
+```bash
+MI_CLIENT_ID=$(az identity show --name orders-service-identity --resource-group rg-orders-dev --query "clientId" -o tsv)
+
+echo "MI Client ID: $MI_CLIENT_ID"
+```
+
+### 13.4 — Deploy image and set all env vars (single command)
+
+```bash
+MI_CLIENT_ID=$(az identity show --name orders-service-identity --resource-group rg-orders-dev --query "clientId" -o tsv)
+
+az containerapp update --name acrordersapp --resource-group rg-orders-dev --image acrordersdev.azurecr.io/orders-service:latest --set-env-vars "POSTGRES_HOST=pg-orders-dev.postgres.database.azure.com" "POSTGRES_DB=ordersdb" "POSTGRES_MI_USER=orders-service-identity" "AZURE_CLIENT_ID=$MI_CLIENT_ID" "SPRING_DATASOURCE_AZURE_PASSWORDLESS_ENABLED=true" "AZURE_MI_ENABLED=true"
+```
+
+### 13.5 — Verify the deployment
+
+```bash
+az containerapp show --name acrordersapp --resource-group rg-orders-dev --query "{name:name, image:properties.template.containers[0].image, fqdn:properties.configuration.ingress.fqdn, state:properties.provisioningState}" -o table
+```
+
+### 13.6 — Verify environment variables are set
+
+```bash
+az containerapp show --name acrordersapp --resource-group rg-orders-dev --query "properties.template.containers[0].env[].{name:name, value:value}" -o table
+```
+
+### 13.7 — Check container logs after deploy
+
+```bash
+az containerapp logs show --name acrordersapp --resource-group rg-orders-dev --tail 100
+```
+
+Look for:
+- `HikariPool-1 - Start completed` — DB connection works
+- `Successfully applied X migrations` — Flyway ran
+- `PSQLException` or `ManagedIdentityCredential` — connection issue
+
+### 13.8 — Test endpoints after deploy
+
+```bash
+FQDN=$(az containerapp show --name acrordersapp --resource-group rg-orders-dev --query "properties.configuration.ingress.fqdn" -o tsv)
+
+echo "App URL: https://$FQDN"
+
+curl -s https://$FQDN/actuator/health
+
+curl -s https://$FQDN/orders
+```
+
+### 13.9 — Deploy a specific image tag (not latest)
+
+```bash
+az containerapp update --name acrordersapp --resource-group rg-orders-dev --image acrordersdev.azurecr.io/orders-service:<TAG>
+```
+
+Replace `<TAG>` with the short SHA from the build workflow (e.g. `abc1234`).
+
+### 13.10 — Rollback to a previous revision
+
+```bash
+# List all revisions
+az containerapp revision list --name acrordersapp --resource-group rg-orders-dev --query "[].{name:name, active:properties.active, created:properties.createdTime, image:properties.template.containers[0].image}" -o table
+
+# Activate a previous revision (replace REVISION_NAME)
+az containerapp revision activate --name acrordersapp --resource-group rg-orders-dev --revision <REVISION_NAME>
+
+# Route all traffic to it
+az containerapp ingress traffic set --name acrordersapp --resource-group rg-orders-dev --revision-weight <REVISION_NAME>=100
+```
+
+---
+
+## 14. Troubleshooting
+
+> Common issues and how to debug them.
 
 ```bash
 # Check container app provisioning errors
@@ -306,3 +403,27 @@ az postgres flexible-server connect \
   --admin-user <YOUR_ENTRA_EMAIL> \
   --database-name ordersdb
 ```
+
+
+
+# --- very important
+
+The container app is in Failed state. Let's check why and fix it:                                                                                                               
+                                                                                                                                                                                  
+  az containerapp show --name acrordersapp --resource-group rg-orders-dev -o json                                                                                                 
+                                                                                                                                                                                  
+  Share the output — it will show what failed. Most likely the placeholder image mcr.microsoft.com/k8se/quickstart:latest or the registry config caused the failure.              
+                                                                                                                                                                                  
+  If the output is too long, just run this to get the key error:                                                                                                                
+                                                                                                                                                                                  
+  az containerapp show --name acrordersapp --resource-group rg-orders-dev --query "{state:properties.provisioningState, image:properties.template.containers[0].image,            
+  envVars:properties.template.containers[0].env[].name, registries:properties.configuration.registries}" -o json
+
+  #### update container
+  az containerapp update --name acrordersapp --resource-group rg-orders-dev --set-env-vars "AZURE_CLIENT_ID=fe470e7c-def6-4461-91bb-b946338cb026"                                 
+  "SPRING_DATASOURCE_AZURE_PASSWORDLESS_ENABLED=true" "AZURE_MI_ENABLED=true"   
+
+  az containerapp logs show --name acrordersapp --resource-group rg-orders-dev --tail 50
+
+
+  # az containerapp update --name acrordersapp --resource-group rg-orders-dev --min-replicas 1      

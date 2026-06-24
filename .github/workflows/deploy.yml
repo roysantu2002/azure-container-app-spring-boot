@@ -7,6 +7,14 @@ on:
         description: "Full image tag (e.g. acrordersdev.azurecr.io/orders-service:abc1234). Leave empty to use latest."
         required: false
         default: ""
+      fresh_deploy:
+        description: "Delete and recreate the container app (use if stuck in Failed/InProgress)"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
   workflow_run:
     workflows: ["Build and Push Image"]
     types: [completed]
@@ -21,6 +29,8 @@ env:
   IMAGE_NAME: orders-service
   RESOURCE_GROUP: rg-orders-dev
   CONTAINER_APP_NAME: acrordersapp
+  ACA_ENVIRONMENT: managedEnvironment-rgordersdev-a29a
+  MI_RESOURCE_ID: /subscriptions/0bb4f66b-be3a-4331-941c-fd6c8c0a3eef/resourcegroups/rg-orders-dev/providers/Microsoft.ManagedIdentity/userAssignedIdentities/orders-service-identity
 
 jobs:
   deploy:
@@ -57,11 +67,66 @@ jobs:
           echo "client_id=${CLIENT_ID}" >> "$GITHUB_OUTPUT"
           echo "Managed Identity Client ID: ${CLIENT_ID}"
 
-      - name: Set environment variables
+      - name: Delete existing container app (fresh deploy)
+        if: github.event.inputs.fresh_deploy == 'true'
+        run: |
+          echo "Deleting existing container app..."
+          az containerapp delete \
+            --name ${{ env.CONTAINER_APP_NAME }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --yes 2>&1 || echo "No existing app to delete"
+          echo "Waiting for deletion to complete..."
+          sleep 30
+
+      - name: Create container app (fresh deploy)
+        if: github.event.inputs.fresh_deploy == 'true'
+        run: |
+          az containerapp create \
+            --name ${{ env.CONTAINER_APP_NAME }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --environment ${{ env.ACA_ENVIRONMENT }} \
+            --image "${{ steps.image.outputs.tag }}" \
+            --registry-server "${{ env.ACR_NAME }}.azurecr.io" \
+            --registry-identity "${{ env.MI_RESOURCE_ID }}" \
+            --user-assigned "${{ env.MI_RESOURCE_ID }}" \
+            --target-port 8080 \
+            --ingress external \
+            --min-replicas 1 \
+            --max-replicas 3 \
+            --cpu 0.5 \
+            --memory 1Gi \
+            --env-vars \
+              "POSTGRES_HOST=pg-orders-dev.postgres.database.azure.com" \
+              "POSTGRES_DB=ordersdb" \
+              "POSTGRES_MI_USER=orders-service-identity" \
+              "AZURE_CLIENT_ID=${{ steps.mi.outputs.client_id }}" \
+              "SPRING_DATASOURCE_AZURE_PASSWORDLESS_ENABLED=true" \
+              "AZURE_MI_ENABLED=true"
+
+      - name: Wait for any active provisioning to complete
+        if: github.event.inputs.fresh_deploy != 'true'
+        run: |
+          echo "Checking container app provisioning state..."
+          for i in $(seq 1 60); do
+            STATE=$(az containerapp show \
+              --name ${{ env.CONTAINER_APP_NAME }} \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --query "properties.provisioningState" -o tsv 2>/dev/null || echo "NotFound")
+            echo "Attempt ${i}/60: provisioningState=${STATE}"
+            if [ "$STATE" = "Succeeded" ] || [ "$STATE" = "Failed" ]; then
+              break
+            fi
+            sleep 10
+          done
+
+      - name: Update container app
+        if: github.event.inputs.fresh_deploy != 'true'
         run: |
           az containerapp update \
             --name ${{ env.CONTAINER_APP_NAME }} \
             --resource-group ${{ env.RESOURCE_GROUP }} \
+            --image "${{ steps.image.outputs.tag }}" \
+            --min-replicas 1 \
             --set-env-vars \
               "POSTGRES_HOST=pg-orders-dev.postgres.database.azure.com" \
               "POSTGRES_DB=ordersdb" \
@@ -70,35 +135,14 @@ jobs:
               "SPRING_DATASOURCE_AZURE_PASSWORDLESS_ENABLED=true" \
               "AZURE_MI_ENABLED=true"
 
-      - name: Wait for provisioning to complete
-        run: |
-          echo "Waiting for container app provisioning to complete..."
-          for i in $(seq 1 30); do
-            STATE=$(az containerapp show \
-              --name ${{ env.CONTAINER_APP_NAME }} \
-              --resource-group ${{ env.RESOURCE_GROUP }} \
-              --query "properties.provisioningState" -o tsv)
-            echo "Attempt ${i}: provisioningState=${STATE}"
-            if [ "$STATE" = "Succeeded" ]; then
-              echo "Provisioning complete."
-              break
-            fi
-            sleep 10
-          done
-
-      - name: Deploy image
-        run: |
-          az containerapp update \
-            --name ${{ env.CONTAINER_APP_NAME }} \
-            --resource-group ${{ env.RESOURCE_GROUP }} \
-            --image "${{ steps.image.outputs.tag }}"
-
       - name: Verify deployment
         run: |
+          echo "Waiting for deployment to settle..."
+          sleep 15
           az containerapp show \
             --name ${{ env.CONTAINER_APP_NAME }} \
             --resource-group ${{ env.RESOURCE_GROUP }} \
-            --query "{name:name, image:properties.template.containers[0].image, fqdn:properties.configuration.ingress.fqdn, provisioningState:properties.provisioningState}" \
+            --query "{name:name, image:properties.template.containers[0].image, fqdn:properties.configuration.ingress.fqdn, provisioningState:properties.provisioningState, minReplicas:properties.template.scale.minReplicas}" \
             -o table
 
       - name: Show app URL
@@ -107,6 +151,8 @@ jobs:
             --name ${{ env.CONTAINER_APP_NAME }} \
             --resource-group ${{ env.RESOURCE_GROUP }} \
             --query "properties.configuration.ingress.fqdn" -o tsv)
+          echo "========================================="
           echo "App URL: https://${FQDN}"
           echo "Health:  https://${FQDN}/actuator/health"
           echo "Orders:  https://${FQDN}/orders"
+          echo "========================================="
