@@ -438,3 +438,25 @@ santu [ ~ ]$  az role assignment create --assignee $MI_PRINCIPAL_ID --role AcrPu
 
 # container app logs
   az containerapp logs show --name acrordersapp --resource-group rg-orders-dev --tail 100       
+
+  ## very important
+   az containerapp show --name acrordersapp --resource-group rg-orders-dev --query "{state:properties.provisioningState, image:properties.template.containers[0].image}" -o table  
+
+
+   ## restart 
+
+     az containerapp revision restart --name acrordersapp --resource-group rg-orders-dev --revision $(az containerapp revision list --name acrordersapp --resource-group rg-orders-dev --query "[0].name" -o tsv)
+
+
+FQDN=$(az containerapp show --name acrordersapp --resource-group rg-orders-dev --query "properties.configuration.ingress.fqdn" -o tsv)
+
+  curl -s https://$FQDN/actuator/health
+  curl -s https://$FQDN/orders
+
+
+  az postgres flexible-server firewall-rule create --resource-group rg-orders-dev --server-name pg-orders-dev -n AllowAzureServices --start-ip-address 0.0.0.0 --end-ip-address 0.0.0.0  
+
+
+  # check the entra_id managed id
+
+  az postgres flexible-server microsoft-entra-admin list --server-name pg-orders-dev --resource-group rg-orders-dev -o table   
