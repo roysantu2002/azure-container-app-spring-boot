@@ -427,3 +427,14 @@ The container app is in Failed state. Let's check why and fix it:
 
 
   # az containerapp update --name acrordersapp --resource-group rg-orders-dev --min-replicas 1      
+
+
+  MI_PRINCIPAL_ID=$(az identity show --name orders-service-identity --resource-group rg-orders-dev --query "principalId" -o tsv)      
+santu [ ~ ]$ $MI_PRINCIPAL_ID
+bash: a30d559b-94f1-40b1-b262-de88ff259c9d: command not found
+santu [ ~ ]$ ACR_ID=$(az acr show --name acrordersdev --resource-group rg-orders-dev --query "id" -o tsv) 
+santu [ ~ ]$  az role assignment create --assignee $MI_PRINCIPAL_ID --role AcrPull --scope $ACR_ID   
+
+
+# container app logs
+  az containerapp logs show --name acrordersapp --resource-group rg-orders-dev --tail 100       

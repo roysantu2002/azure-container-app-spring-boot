@@ -4,7 +4,7 @@ server:
 spring:
 
   datasource:
-    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:5432/${POSTGRES_DB:ordersdb}?sslmode=require
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:5432/${POSTGRES_DB:ordersdb}?sslmode=require&authenticationPluginClassName=com.azure.identity.extensions.jdbc.postgresql.AzurePostgresqlAuthenticationPlugin
     username: ${POSTGRES_MI_USER:orders-service-identity}
     driver-class-name: org.postgresql.Driver
 
