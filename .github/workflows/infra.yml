@@ -43,6 +43,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Debug — Verify secrets are set
+        run: |
+          echo "AZURE_CLIENT_ID is set: ${{ secrets.AZURE_CLIENT_ID != '' }}"
+          echo "AZURE_TENANT_ID is set: ${{ secrets.AZURE_TENANT_ID != '' }}"
+          echo "AZURE_SUBSCRIPTION_ID is set: ${{ secrets.AZURE_SUBSCRIPTION_ID != '' }}"
+          echo "CLIENT_ID length: $(echo -n '${{ secrets.AZURE_CLIENT_ID }}' | wc -c)"
+          echo "TENANT_ID length: $(echo -n '${{ secrets.AZURE_TENANT_ID }}' | wc -c)"
+
       - name: Azure Login (OIDC)
         uses: azure/login@v2
         with:
