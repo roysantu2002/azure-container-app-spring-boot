@@ -78,6 +78,11 @@ variable "container_port" {
   default     = 8080
 }
 
+variable "eventhub_namespace_name" {
+  description = "Azure Event Hubs namespace name"
+  type        = string
+}
+
 variable "spring_profiles_active" {
   description = "Spring Boot active profile (dev, staging, prod)"
   type        = string

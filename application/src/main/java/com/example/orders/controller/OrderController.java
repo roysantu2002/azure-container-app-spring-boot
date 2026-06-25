@@ -2,6 +2,7 @@ package com.example.orders.controller;
 
 import com.example.orders.entity.OrderEntity;
 import com.example.orders.repository.OrderRepository;
+import com.example.orders.service.OrderEventProducer;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,9 +16,11 @@ import java.util.UUID;
 public class OrderController {
 
     private final OrderRepository orderRepository;
+    private final OrderEventProducer orderEventProducer;
 
-    public OrderController(OrderRepository orderRepository) {
+    public OrderController(OrderRepository orderRepository, OrderEventProducer orderEventProducer) {
         this.orderRepository = orderRepository;
+        this.orderEventProducer = orderEventProducer;
     }
 
     @GetMapping
@@ -40,6 +43,7 @@ public class OrderController {
             order.setTotalPrice(order.getUnitPrice().multiply(BigDecimal.valueOf(order.getQuantity())));
         }
         OrderEntity saved = orderRepository.save(order);
+        orderEventProducer.publish("order-events", saved.getId().toString(), saved);
         return ResponseEntity.status(201).body(saved);
     }
 }

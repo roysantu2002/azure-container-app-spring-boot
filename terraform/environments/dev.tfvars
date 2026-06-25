@@ -20,6 +20,9 @@ managed_identity_name = "orders-service-identity"
 postgres_server_name = "pg-orders-dev"
 postgres_db_name     = "ordersdb"
 
+# Event Hubs (Kafka-compatible)
+eventhub_namespace_name = "evhns-orders-dev"
+
 # Container Apps
 aca_environment_name = "managedEnvironment-rgordersdev-a29a"
 container_app_name   = "acrordersapp"

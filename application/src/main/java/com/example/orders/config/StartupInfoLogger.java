@@ -13,12 +13,15 @@ import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.Statement;
 
+import org.springframework.kafka.core.KafkaTemplate;
+
 @Component
 public class StartupInfoLogger {
 
     private static final Logger log = LoggerFactory.getLogger(StartupInfoLogger.class);
 
     private final DataSource dataSource;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
     @Value("${spring.profiles.active:unknown}")
     private String activeProfile;
@@ -29,8 +32,12 @@ public class StartupInfoLogger {
     @Value("${api.base-path:/api/v1}")
     private String apiBasePath;
 
-    public StartupInfoLogger(DataSource dataSource) {
+    @Value("${spring.kafka.bootstrap-servers:not configured}")
+    private String kafkaBootstrapServers;
+
+    public StartupInfoLogger(DataSource dataSource, KafkaTemplate<String, Object> kafkaTemplate) {
         this.dataSource = dataSource;
+        this.kafkaTemplate = kafkaTemplate;
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -60,6 +67,11 @@ public class StartupInfoLogger {
             log.info("  Auth Method    : {}", isAzure ? "Entra ID Token (via DefaultAzureCredential)" : "Password");
             log.info("  SSL            : {}", url != null && url.contains("sslmode=require") ? "Enabled" : "Disabled");
             log.info("  Orders Count   : {}", recordCount);
+            log.info("---------------------------------------------------------");
+            boolean isEventHubs = kafkaBootstrapServers.contains("servicebus.windows.net");
+            log.info("  Kafka Broker   : {}", isEventHubs ? "*** AZURE EVENT HUBS ***" : kafkaBootstrapServers);
+            log.info("  Bootstrap      : {}", kafkaBootstrapServers);
+            log.info("  Auth Method    : {}", isEventHubs ? "OAUTHBEARER (via DefaultAzureCredential)" : "PLAINTEXT");
             log.info("---------------------------------------------------------");
             log.info("  Endpoints:");
             log.info("    GET  http://localhost:{}{}/orders", serverPort, apiBasePath);

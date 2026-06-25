@@ -37,6 +37,9 @@ spring:
       credential:
         managed-identity-enabled: false
 
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+
   jpa:
     show-sql: true
 

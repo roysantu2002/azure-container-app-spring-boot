@@ -5,3 +5,5 @@
 /Users/santuroy/Downloads/orders-platform-scaffold/application/src/main/java/com/example/orders/controller/OrderController.java
 /Users/santuroy/Downloads/orders-platform-scaffold/application/src/main/java/com/example/orders/entity/OrderEntity.java
 /Users/santuroy/Downloads/orders-platform-scaffold/application/src/main/java/com/example/orders/repository/OrderRepository.java
+/Users/santuroy/Downloads/orders-platform-scaffold/application/src/main/java/com/example/orders/service/OrderEventListener.java
+/Users/santuroy/Downloads/orders-platform-scaffold/application/src/main/java/com/example/orders/service/OrderEventProducer.java
