@@ -99,6 +99,21 @@ resource "azurerm_container_app" "orders" {
         value = "true"
       }
 
+      env {
+        name  = "SERVER_PORT"
+        value = tostring(var.container_port)
+      }
+
+      env {
+        name  = "SPRING_PROFILES_ACTIVE"
+        value = var.spring_profiles_active
+      }
+
+      env {
+        name  = "SPRING_APPLICATION_NAME"
+        value = "orders-platform"
+      }
+
       liveness_probe {
         transport        = "HTTP"
         path             = "/actuator/health/liveness"

@@ -23,3 +23,6 @@ postgres_db_name     = "ordersdb"
 # Container Apps
 aca_environment_name = "managedEnvironment-rgordersdev-a29a"
 container_app_name   = "acrordersapp"
+
+# Spring Boot
+spring_profiles_active = "dev"

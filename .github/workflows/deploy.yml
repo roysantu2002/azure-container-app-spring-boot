@@ -101,7 +101,10 @@ jobs:
               "POSTGRES_MI_USER=orders-service-identity" \
               "AZURE_CLIENT_ID=${{ steps.mi.outputs.client_id }}" \
               "SPRING_DATASOURCE_AZURE_PASSWORDLESS_ENABLED=true" \
-              "AZURE_MI_ENABLED=true"
+              "AZURE_MI_ENABLED=true" \
+              "SERVER_PORT=8080" \
+              "SPRING_PROFILES_ACTIVE=dev" \
+              "SPRING_APPLICATION_NAME=orders-platform"
 
       - name: Wait for any active provisioning to complete
         if: github.event.inputs.fresh_deploy != 'true'
@@ -133,7 +136,10 @@ jobs:
               "POSTGRES_MI_USER=orders-service-identity" \
               "AZURE_CLIENT_ID=${{ steps.mi.outputs.client_id }}" \
               "SPRING_DATASOURCE_AZURE_PASSWORDLESS_ENABLED=true" \
-              "AZURE_MI_ENABLED=true"
+              "AZURE_MI_ENABLED=true" \
+              "SERVER_PORT=8080" \
+              "SPRING_PROFILES_ACTIVE=dev" \
+              "SPRING_APPLICATION_NAME=orders-platform"
 
       - name: Verify deployment
         run: |
@@ -154,5 +160,5 @@ jobs:
           echo "========================================="
           echo "App URL: https://${FQDN}"
           echo "Health:  https://${FQDN}/actuator/health"
-          echo "Orders:  https://${FQDN}/orders"
+          echo "Orders:  https://${FQDN}/api/v1/orders"
           echo "========================================="

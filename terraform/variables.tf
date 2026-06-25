@@ -77,3 +77,9 @@ variable "container_port" {
   type        = number
   default     = 8080
 }
+
+variable "spring_profiles_active" {
+  description = "Spring Boot active profile (dev, staging, prod)"
+  type        = string
+  default     = "dev"
+}

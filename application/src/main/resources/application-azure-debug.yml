@@ -1,0 +1,44 @@
+# Profile: azure-debug
+# Connects to Azure PostgreSQL from your laptop.
+#
+# Authentication: DefaultAzureCredential checks in order:
+#   1. Environment vars (AZURE_CLIENT_ID + AZURE_CLIENT_SECRET + AZURE_TENANT_ID) → Service Principal
+#   2. az login session → Your AAD user
+#   Either works — set whichever you have access to.
+#
+# Run with Service Principal:
+#   SPRING_PROFILES_ACTIVE=azure-debug \
+#   POSTGRES_HOST=pg-orders-dev.postgres.database.azure.com \
+#   POSTGRES_DB=ordersdb \
+#   POSTGRES_AZURE_USER=orders-service-local-debug \
+#   AZURE_CLIENT_ID=<sp-app-id> \
+#   AZURE_CLIENT_SECRET=<sp-password> \
+#   AZURE_TENANT_ID=<tenant-id> \
+#   mvn spring-boot:run
+#
+# Run with az login (if your AAD user has a PG role):
+#   SPRING_PROFILES_ACTIVE=azure-debug \
+#   POSTGRES_HOST=pg-orders-dev.postgres.database.azure.com \
+#   POSTGRES_DB=ordersdb \
+#   POSTGRES_AZURE_USER=your-email@domain.com \
+#   mvn spring-boot:run
+
+spring:
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST}:5432/${POSTGRES_DB:ordersdb}?sslmode=require&authenticationPluginClassName=com.azure.identity.extensions.jdbc.postgresql.AzurePostgresqlAuthenticationPlugin
+    username: ${POSTGRES_AZURE_USER}
+    driver-class-name: org.postgresql.Driver
+
+    azure:
+      passwordless-enabled: true
+
+  cloud:
+    azure:
+      credential:
+        managed-identity-enabled: false
+
+  jpa:
+    show-sql: true
+
+  flyway:
+    enabled: false

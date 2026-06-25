@@ -324,14 +324,14 @@ This app uses `none` because Flyway manages the schema. If you set `update`, Hib
 ### 5.1 Request Flow
 
 ```
-Client sends: GET /orders
+Client sends: GET /api/v1/orders
   |
   v
 Tomcat receives HTTP request on port 8080
   |
   v
 Spring DispatcherServlet routes to OrderController.listOrders()
-  (matched by @RequestMapping("/orders") + @GetMapping)
+  (matched by api.base-path prefix "/api/v1" + @RequestMapping("/orders") + @GetMapping)
   |
   v
 Controller calls orderRepository.findAll()
@@ -362,30 +362,30 @@ HTTP 200 response with JSON body
 
 ### 5.2 The Three Endpoints
 
-**GET /orders** — List all
+**GET /api/v1/orders** — List all
 
 ```
-Request:  GET /orders
+Request:  GET /api/v1/orders
 Response: 200 OK
 Body:     [{"id":"a1b2...","customerName":"Priya Sharma",...}, ...]
 ```
 
 No business logic. Straight `findAll()`.
 
-**GET /orders/{id}** — Get one
+**GET /api/v1/orders/{id}** — Get one
 
 ```
-Request:  GET /orders/a1b2c3d4-e5f6-7890-abcd-ef1234567890
+Request:  GET /api/v1/orders/a1b2c3d4-e5f6-7890-abcd-ef1234567890
 Response: 200 OK + order JSON   (if found)
           404 Not Found         (if not found)
 ```
 
 Uses `Optional` pattern: `findById()` returns `Optional<OrderEntity>`. The `.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build())` handles both cases in one line.
 
-**POST /orders** — Create new
+**POST /api/v1/orders** — Create new
 
 ```
-Request:  POST /orders
+Request:  POST /api/v1/orders
 Body:     {"customerName":"Test","customerEmail":"t@t.com","productName":"Laptop","quantity":2,"unitPrice":50000}
 Response: 201 Created
 Body:     {"id":"<generated-uuid>","customerName":"Test",...,"totalPrice":100000,...}
@@ -623,7 +623,7 @@ mvn clean package -DskipTests
 # Flyway runs on startup, creates the new table automatically
 ```
 
-That's it. On next deploy, Flyway sees V3 is new, runs it, creates the `products` table. The app starts serving `/products` endpoints.
+That's it. On next deploy, Flyway sees V3 is new, runs it, creates the `products` table. The app starts serving `/api/v1/products` endpoints (the `/api/v1` prefix is applied automatically via `api.base-path` in `application.yml`).
 
 ---
 

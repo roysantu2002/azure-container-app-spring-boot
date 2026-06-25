@@ -1,0 +1,1 @@
+{"version":"1.0","connections":[{"details":{"protocol":"postgresql","address":{"server":"pg-orders-dev.postgres.database.azure.com","database":"ordersdb"}},"options":null}]}
