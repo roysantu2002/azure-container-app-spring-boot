@@ -1,0 +1,17 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/ordersdb
+    username: ${POSTGRES_USER:postgres}
+    password: ${POSTGRES_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+
+    azure:
+      passwordless-enabled: false
+
+  cloud:
+    azure:
+      credential:
+        managed-identity-enabled: false
+
+  jpa:
+    show-sql: true

@@ -1,10 +1,18 @@
+api:
+  base-path: ${API_BASE_PATH:/api/v1}
+
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080}
 
 spring:
+  application:
+    name: ${SPRING_APPLICATION_NAME:orders-platform}
+
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
 
   datasource:
-    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:5432/${POSTGRES_DB:ordersdb}?sslmode=require&authenticationPluginClassName=com.azure.identity.extensions.jdbc.postgresql.AzurePostgresqlAuthenticationPlugin
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:5432/${POSTGRES_DB:ordersdb}?sslmode=${POSTGRES_SSLMODE:require}&authenticationPluginClassName=com.azure.identity.extensions.jdbc.postgresql.AzurePostgresqlAuthenticationPlugin
     username: ${POSTGRES_MI_USER:orders-service-identity}
     driver-class-name: org.postgresql.Driver
 
