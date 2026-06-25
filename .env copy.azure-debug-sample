@@ -1,0 +1,16 @@
+# Azure Debug — Uses your "az login" session to connect
+# This file is gitignored — secrets will NOT be committed
+# Run "az login" before starting the app
+#
+# Usage:
+#   Azure:  cd application && source ../.env.azure-debug && mvn spring-boot:run
+#   Local:  Open a NEW terminal, then: mvn spring-boot:run
+#     (or explicitly: SPRING_PROFILES_ACTIVE=local mvn spring-boot:run)
+#
+# NOTE: Variables are exported so Maven's child process inherits them.
+# To avoid accidentally connecting to Azure later, use a fresh terminal for local runs.
+
+export SPRING_PROFILES_ACTIVE=
+export POSTGRES_HOST=
+export POSTGRES_DB=
+export POSTGRES_AZURE_USER=rxxxxxxxxxx#EXT#@rxxxxxxxx.onmicrosoft.com
