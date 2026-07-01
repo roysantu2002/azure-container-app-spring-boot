@@ -14,3 +14,19 @@ application/target/
 # Local profile (may contain passwords)
 # application-local.yml is committed (uses env var placeholders)
 # but .env files with actual passwords are not
+
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraform.lock.hcl
+
+# Terraform plans
+*.tfplan
+*.plan
