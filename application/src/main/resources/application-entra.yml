@@ -1,0 +1,39 @@
+# Profile: entra
+# Enables Microsoft Entra ID (Azure AD) OIDC authentication.
+# Activate alongside azure-debug: SPRING_PROFILES_ACTIVE=azure-debug,entra
+#
+# Required env vars:
+#   AZURE_TENANT_ID        - Your Entra ID tenant ID
+#   ENTRA_APP_CLIENT_ID    - The orders-platform-api App Registration client ID
+#   ENTRA_APP_CLIENT_SECRET - (optional) Client secret if using confidential client
+#
+# NOTE: These use ENTRA_APP_ prefix to avoid conflicting with AZURE_CLIENT_ID
+# which DefaultAzureCredential uses for database (managed identity / service principal).
+
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: https://login.microsoftonline.com/${AZURE_TENANT_ID}/v2.0
+          audiences: api://${ENTRA_APP_CLIENT_ID}
+
+  cloud:
+    azure:
+      active-directory:
+        enabled: true
+        credential:
+          client-id: ${ENTRA_APP_CLIENT_ID}
+          client-secret: ${ENTRA_APP_CLIENT_SECRET:}
+        profile:
+          tenant-id: ${AZURE_TENANT_ID}
+        app-id-uri: api://${ENTRA_APP_CLIENT_ID}
+
+  kafka:
+    listener:
+      auto-startup: false
+
+logging:
+  level:
+    org.springframework.security: DEBUG
+    com.azure.spring: DEBUG

@@ -12,6 +12,8 @@ spring:
     azure:
       credential:
         managed-identity-enabled: false
+      active-directory:
+        enabled: false
 
   jpa:
     show-sql: true

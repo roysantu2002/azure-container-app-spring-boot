@@ -59,7 +59,24 @@ spring:
     azure:
       credential:
         managed-identity-enabled: ${AZURE_MI_ENABLED:false}
-        client-id: ${AZURE_CLIENT_ID:}
+        client-id: ${AZURE_MI_CLIENT_ID:}
+      active-directory:
+        enabled: ${AZURE_AD_ENABLED:false}
+        credential:
+          client-id: ${ENTRA_APP_CLIENT_ID:}
+          client-secret: ${ENTRA_APP_CLIENT_SECRET:}
+        profile:
+          tenant-id: ${AZURE_TENANT_ID:}
+        app-id-uri: api://${ENTRA_APP_CLIENT_ID:}
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    oauth:
+      client-id: ${ENTRA_APP_CLIENT_ID:}
+      use-pkce-with-authorization-code-grant: true
 
 management:
   endpoint:

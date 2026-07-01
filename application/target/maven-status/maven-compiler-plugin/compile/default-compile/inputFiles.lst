@@ -1,6 +1,9 @@
 /Users/santuroy/Downloads/orders-platform-scaffold/application/src/main/java/com/example/orders/OrdersApplication.java
 /Users/santuroy/Downloads/orders-platform-scaffold/application/src/main/java/com/example/orders/config/ApiPrefixConfig.java
 /Users/santuroy/Downloads/orders-platform-scaffold/application/src/main/java/com/example/orders/config/AzureCredentialConfig.java
+/Users/santuroy/Downloads/orders-platform-scaffold/application/src/main/java/com/example/orders/config/LocalSecurityConfig.java
+/Users/santuroy/Downloads/orders-platform-scaffold/application/src/main/java/com/example/orders/config/OpenApiConfig.java
+/Users/santuroy/Downloads/orders-platform-scaffold/application/src/main/java/com/example/orders/config/SecurityConfig.java
 /Users/santuroy/Downloads/orders-platform-scaffold/application/src/main/java/com/example/orders/config/StartupInfoLogger.java
 /Users/santuroy/Downloads/orders-platform-scaffold/application/src/main/java/com/example/orders/controller/OrderController.java
 /Users/santuroy/Downloads/orders-platform-scaffold/application/src/main/java/com/example/orders/entity/OrderEntity.java
